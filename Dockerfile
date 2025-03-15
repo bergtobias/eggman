@@ -21,7 +21,6 @@
   COPY --from=builder /app/dist ./dist
   COPY --from=builder /app/package.json ./
 
-  RUN npm run register
 
   CMD ["npm", "run", "start"]
   
