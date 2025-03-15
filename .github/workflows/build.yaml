@@ -37,9 +37,9 @@ jobs:
         # Step 5: Build Docker image with short SHA tag
 
         run: |
-          docker build -t ghcr.io/${{ github.repository_owner }}/eggman:${{ env.SHORT_SHA }} .
+          docker build -t ghcr.io/${{ github.repository_owner }}/eggman:latest .
       - name: Push Docker image to GHCR
         # Step 6: Push Docker image to GHCR
 
         run: |
-          docker push ghcr.io/${{ github.repository_owner }}/eggman:${{ env.SHORT_SHA }}
+          docker push ghcr.io/${{ github.repository_owner }}/eggman:latest
