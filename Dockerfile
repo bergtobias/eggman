@@ -1,5 +1,5 @@
 # ---- Build Stage ----
-  FROM node:20-alpine AS builder
+  FROM arm64v8/node:20-alpine AS builder
 
   WORKDIR /app
   
