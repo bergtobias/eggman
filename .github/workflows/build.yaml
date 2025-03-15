@@ -25,6 +25,7 @@ jobs:
 
         uses: docker/login-action@v2
         with:
+          registry: ghcr.io
           username: ${{ github.actor }} # Uses GitHub username
           password: ${{ secrets.GITHUB_TOKEN }} # Uses the automatically provided GitHub token
       - name: Get short commit SHA
