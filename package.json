@@ -1,0 +1,20 @@
+{
+  "scripts": {
+    "start": "node --experimental-strip-types --env-file=.env src/shardManager.ts",
+    "dev": "tsx watch --clear-screen=false src/shardManager.ts",
+    "register": "tsx src/commands/index.ts"
+  },
+  "type": "module",
+  "dependencies": {
+    "body-parser": "^1.20.3",
+    "discord.js": "^14.18.0",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "tsx": "^4.19.3"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.0",
+    "eslint": "^9.22.0",
+    "typescript": "^5.8.2"
+  }
+}
