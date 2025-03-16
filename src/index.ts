@@ -3,7 +3,8 @@ import { readyHandler } from "./ready.ts";
 import { configDotenv } from "dotenv";
 import { scrambleTeams } from "./commands/scramble.ts";
 import { roll } from "./commands/roll.ts";
-
+import express from "express";
+import prom from "express-prometheus-middleware";
 configDotenv();
 
 const client = new Client({
@@ -41,3 +42,14 @@ client.on(Events.InteractionCreate, async (interaction) => {
 });
 
 client.login(process.env.DISCORD_TOKEN);
+
+const app = express();
+app.use(
+  prom({
+    metricsPath: "/metrics",
+  })
+);
+
+app.listen(3000, () => {
+  console.log("Server running on port 3000");
+});
