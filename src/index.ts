@@ -49,7 +49,11 @@ app.use(
     metricsPath: "/metrics",
   })
 );
+//Health check
+app.get("*", (req, res) => {
+  res.status(200).json("OK");
+});
 
 app.listen(3000, () => {
-  console.log("Server running on port 3000");
+  console.log("Server running on port http://localhost:3000");
 });
