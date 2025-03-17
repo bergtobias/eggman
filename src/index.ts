@@ -51,6 +51,7 @@ app.use(
 );
 //Health check
 app.get("*", (req, res) => {
+  console.log("Health check");
   res.status(200).json("OK");
 });
 
