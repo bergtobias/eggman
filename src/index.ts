@@ -49,6 +49,11 @@ app.use(
     metricsPath: "/metrics",
   })
 );
+
+app.get("/", (req, res) => {
+  res.send("Hello World! Version 1.0");
+});
+
 //Health check
 app.get("*", (req, res) => {
   console.log("Health check");
