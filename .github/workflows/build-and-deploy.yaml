@@ -41,45 +41,37 @@ jobs:
             --platform linux/arm64,linux/amd64 \
             -t ghcr.io/${{ github.repository_owner }}/eggman:$SHORT_SHA \
             --push .
-  update-gitops:
-    needs: build
+  update-manifest:
+    name: Update Manifests in External Repo
+    needs: build-and-push
     runs-on: ubuntu-latest
+    env:
+      IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/eggman
+      KUSTOMIZATION_PATH: apps/eggman/overlays/prod/kustomization.yaml
 
     steps:
-      - name: Checkout GitOps repo (using PAT of enohjg)
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v3
         with:
           repository: bergtobias/homelab-infra
           ref: main
           token: ${{ secrets.GH_OPS_TOKEN }}
-          path: apps/eggman
 
-      - name: Patch overlay's newTag to the new SHA (using sed)
-        run: |
-          IMAGE="ghcr.io/${{ github.repository_owner }}/eggman"
-          NEWTAG="${{ needs.build.outputs.short_sha }}"
-          OVERLAY="apps/eggman/overlays/prod/kustomization.yaml"
+      - run: |
+          curl -sSfL \
+            https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2Fv5.0.1/kustomize_v5.0.1_linux_amd64.tar.gz \
+            | tar xz -C /usr/local/bin
+          chmod +x /usr/local/bin/kustomize
 
-          # Escape all slashes in $IMAGE so sed's regex works properly
-          ESCAPED_IMAGE="${IMAGE//\//\\/}"
+      - run: |
+          cd $(dirname $KUSTOMIZATION_PATH)
+          kustomize edit set image "${IMAGE_NAME}:${{ needs.build-and-push.outputs.short_sha }}"
 
-          # In-place replace: when you see "name: <IMAGE>", go to the next line (n)
-          # and substitute "newTag: <whatever>" with the new SHA.
-          sed -i "/name: ${ESCAPED_IMAGE}/{n;s/newTag:.*/newTag: ${NEWTAG}/}" "$OVERLAY"
-
-          # (Optional) show the updated block for debugging:
-          sed -n "/name: ${ESCAPED_IMAGE}/, /newTag:/p" "$OVERLAY"
-
-      - name: Commit & push if anything changed
-        run: |
-          cd apps/eggman
-          git config user.name "github-action"
-          git config user.email "github-action@users.noreply.github.com"
-          git add overlays/prod/kustomization.yaml
-
+      - run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add $KUSTOMIZATION_PATH
           if git diff --cached --quiet; then
-            echo "No change in overlay; skipping commit."
-          else
-            git commit -m "ci: bump eggman image to ${{ needs.build.outputs.short_sha }}"
-            git push origin main
+            exit 0
           fi
+          git commit -m "ci: bump eggman image to ${{ needs.build-and-push.outputs.short_sha }} [skip ci]"
+          git push origin main
