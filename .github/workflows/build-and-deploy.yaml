@@ -54,20 +54,21 @@ jobs:
           token: ${{ secrets.GH_OPS_TOKEN }}
           path: infra
 
-      - name: Install yq v4 for in-place YAML edits
-        run: |
-          wget https://github.com/mikefarah/yq/releases/download/v4.38.1/yq_linux_amd64 -O /usr/local/bin/yq
-          chmod +x /usr/local/bin/yq
-
-      - name: Patch overlay’s newTag to the new SHA
+      - name: Patch overlay’s newTag to the new SHA (using sed)
         run: |
           IMAGE="ghcr.io/${{ github.repository_owner }}/eggman"
           NEWTAG="${{ needs.build.outputs.short_sha }}"
           OVERLAY="infra/overlays/prod/kustomization.yaml"
 
-          yq eval "
-            (.images[] | select(.name == strenv(IMAGE)) | .newTag) = strenv(NEWTAG)
-          " -i "$OVERLAY"
+          # Escape all slashes in $IMAGE so sed’s regex works properly
+          ESCAPED_IMAGE="${IMAGE//\//\\/}"
+
+          # In-place replace: when you see "name: <IMAGE>", go to the next line (n)
+          # and substitute "newTag: <whatever>" with the new SHA.
+          sed -i "/name: ${ESCAPED_IMAGE}/{n;s/newTag:.*/newTag: ${NEWTAG}/}" "$OVERLAY"
+
+          # (Optional) show the updated block for debugging:
+          sed -n "/name: ${ESCAPED_IMAGE}/, /newTag:/p" "$OVERLAY"
 
       - name: Commit & push if anything changed
         run: |
