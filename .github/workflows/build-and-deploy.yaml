@@ -52,15 +52,15 @@ jobs:
           repository: bergtobias/homelab-infra
           ref: main
           token: ${{ secrets.GH_OPS_TOKEN }}
-          path: infra
+          path: apps/eggman
 
-      - name: Patch overlay’s newTag to the new SHA (using sed)
+      - name: Patch overlay's newTag to the new SHA (using sed)
         run: |
           IMAGE="ghcr.io/${{ github.repository_owner }}/eggman"
           NEWTAG="${{ needs.build.outputs.short_sha }}"
-          OVERLAY="infra/overlays/prod/kustomization.yaml"
+          OVERLAY="apps/eggman/overlays/prod/kustomization.yaml"
 
-          # Escape all slashes in $IMAGE so sed’s regex works properly
+          # Escape all slashes in $IMAGE so sed's regex works properly
           ESCAPED_IMAGE="${IMAGE//\//\\/}"
 
           # In-place replace: when you see "name: <IMAGE>", go to the next line (n)
@@ -72,7 +72,7 @@ jobs:
 
       - name: Commit & push if anything changed
         run: |
-          cd infra
+          cd apps/eggman
           git config user.name "github-action"
           git config user.email "github-action@users.noreply.github.com"
           git add overlays/prod/kustomization.yaml
