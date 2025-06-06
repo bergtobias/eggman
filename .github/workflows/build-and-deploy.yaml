@@ -1,0 +1,84 @@
+name: Build and Push Docker Image to GHCR
+on:
+  push:
+    branches:
+      - main # Trigger on pushes to main branch
+  pull_request:
+    branches:
+      - main # Trigger on PRs targeting the main branch
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+      contents: read
+    steps:
+      # Step 1: Check out the repository
+      - name: Checkout code
+        uses: actions/checkout@v3
+      - name: Set up Docker Buildx
+        # Step 2: Set up Docker Buildx (for multi-platform builds)
+
+        uses: docker/setup-buildx-action@v2
+      - name: Log in to GitHub Container Registry
+        # Step 3: Log in to GitHub Container Registry (GHCR)
+
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }} # Uses GitHub username
+          password: ${{ secrets.GITHUB_TOKEN }} # Uses the automatically provided GitHub token
+      - name: Get short commit SHA
+        # Step 4: Get short commit SHA (optional)
+
+        id: sha
+        run: echo "SHORT_SHA=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+      - name: Build and Push Docker image
+        # Step 5: Build and Push Docker image for multi-platform (ARM and AMD64)
+
+        run: |
+          docker buildx build \
+            --platform linux/arm64,linux/amd64 \
+            -t ghcr.io/${{ github.repository_owner }}/eggman:$SHORT_SHA \
+            --push .
+  update-gitops:
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout GitOps repo (using PAT of enohjg)
+        uses: actions/checkout@v3
+        with:
+          repository: bergtobias/homelab-infra
+          ref: main
+          token: ${{ secrets.GH_OPS_TOKEN }}
+          path: infra
+
+      - name: Install yq v4 for in-place YAML edits
+        run: |
+          wget https://github.com/mikefarah/yq/releases/download/v4.38.1/yq_linux_amd64 -O /usr/local/bin/yq
+          chmod +x /usr/local/bin/yq
+
+      - name: Patch overlay’s newTag to the new SHA
+        run: |
+          IMAGE="ghcr.io/${{ github.repository_owner }}/eggman"
+          NEWTAG="${{ needs.build.outputs.short_sha }}"
+          OVERLAY="infra/overlays/prod/kustomization.yaml"
+
+          yq eval "
+            (.images[] | select(.name == strenv(IMAGE)) | .newTag) = strenv(NEWTAG)
+          " -i "$OVERLAY"
+
+      - name: Commit & push if anything changed
+        run: |
+          cd infra
+          git config user.name "github-action"
+          git config user.email "github-action@users.noreply.github.com"
+          git add overlays/prod/kustomization.yaml
+
+          if git diff --cached --quiet; then
+            echo "No change in overlay; skipping commit."
+          else
+            git commit -m "ci: bump eggman image to ${{ needs.build.outputs.short_sha }}"
+            git push origin main
+          fi
