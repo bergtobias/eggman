@@ -13,6 +13,7 @@ export class AppUpdate {
     client.user.setPresence({
       activities: [{ name: 'PornHub Simulator 25™' }],
     });
+
     this.logger.log(`Bot logged in as ${client.user.username}`);
   }
 

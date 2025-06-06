@@ -1,0 +1,41 @@
+update-gitops:
+  needs: build
+  runs-on: ubuntu-latest
+
+  steps:
+    - name: Checkout GitOps repo (using PAT of enohjg)
+      uses: actions/checkout@v3
+      with:
+        repository: bergtobias/homelab-infra
+        ref: main
+        token: ${{ secrets.GH_OPS_TOKEN }}
+        path: infra
+
+    - name: Install yq v4 for in-place YAML edits
+      run: |
+        wget https://github.com/mikefarah/yq/releases/download/v4.38.1/yq_linux_amd64 -O /usr/local/bin/yq
+        chmod +x /usr/local/bin/yq
+
+    - name: Patch overlay’s newTag to the new SHA
+      run: |
+        IMAGE="ghcr.io/${{ github.repository_owner }}/eggman"
+        NEWTAG="${{ needs.build.outputs.short_sha }}"
+        OVERLAY="infra/overlays/prod/kustomization.yaml"
+
+        yq eval "
+          (.images[] | select(.name == strenv(IMAGE)) | .newTag) = strenv(NEWTAG)
+        " -i "$OVERLAY"
+
+    - name: Commit & push if anything changed
+      run: |
+        cd infra
+        git config user.name "github-action"
+        git config user.email "github-action@users.noreply.github.com"
+        git add overlays/prod/kustomization.yaml
+
+        if git diff --cached --quiet; then
+          echo "No change in overlay; skipping commit."
+        else
+          git commit -m "ci: bump eggman image to ${{ needs.build.outputs.short_sha }}"
+          git push origin main
+        fi
