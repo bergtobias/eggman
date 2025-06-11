@@ -1,0 +1,30 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: eggman
+  description: Discord bot for automation
+  tags:
+    - bot
+    - discord
+  owner: team:github:eggmans
+spec:
+  type: service
+  lifecycle: production
+  owner: team:github:eggmans
+  system: automation-system
+---
+apiVersion: backstage.io/v1alpha1
+kind: System
+metadata:
+  name: automation-system
+  description: The automation platform powering bots like eggman
+spec:
+  owner: user:github:bergtobias
+---
+apiVersion: backstage.io/v1alpha1
+kind: Domain
+metadata:
+  name: automation
+  description: The automation domain that includes various bots and workflows
+spec:
+  owner: user:github:bergtobias # same here
